@@ -11,6 +11,7 @@ my $pad = 2;
     package Move;
     use strict;
     use warnings;
+    use Clone 'clone';
     my $adj = $pad - 1;
     sub new {
         my ($class, %args) = @_;
@@ -27,11 +28,13 @@ my $pad = 2;
 
     sub perform {
         my ($self,$board) = @_;
+        my $newBoard = clone($board);
         my $interRow = ($self->{destRow} - $self->{startRow}) / 2;
         my $interCol = ($self->{destCol} - $self->{startCol})/ 2;
-        $board->[$self->{destRow}][$self->{destCol}] = 1;
-        $board->[$self->{startRow}][$self->{startCol}] = 0;
-        $board->[$self->{startRow}+$interRow][$self->{startCol} + $interCol] = 0;
+        $newBoard->[$self->{destRow}][$self->{destCol}] = 1;
+        $newBoard->[$self->{startRow}][$self->{startCol}] = 0;
+        $newBoard->[$self->{startRow}+$interRow][$self->{startCol} + $interCol] = 0;
+        return $newBoard;
 
     }
 
@@ -119,7 +122,7 @@ my $print_sub = sub {
     }
 };
 
-my $get_moves = sub {
+my $moves_sub = sub {
     (my $board,my $row, my $col,my $moves) = @_;
     my $element = $board->[$row][$col];
     if($element == 0){
@@ -131,15 +134,50 @@ my $get_moves = sub {
     }
 };
 
-$board->[3][5] = 0;
-#$board->[4][3] = 0;
-#$board->[5][3] = 0;
-my $moves = [];
-traverse_board($board, $get_moves, sub {},$moves);
-traverse_board($board, $print_sub, sub {print "\n"});
-foreach my $move (@{$moves}){
-    say $move->to_string();
+sub print_board{
+    (my $board) = @_;
+    traverse_board($board, $print_sub, sub {print "\n"});
 }
-$moves->[0]->perform($board);
-traverse_board($board, $print_sub, sub {print "\n"});
+sub get_moves {
+    (my $board) = @_;
+    my $moves = [];
+    traverse_board($board, $moves_sub, sub {},$moves);
+    return $moves;
+}
+sub  print_moves {
+    (my $moves) = @_;
+    foreach my $move (@{$moves}){
+        say $move->to_string();
+    }
+}
+
+sub solve {
+    my ($board,$marbles) = @_;
+    if($marbles == 1){
+        print_board($board);
+        return 1;
+    }
+    foreach my $move (@{get_moves($board)}){
+        if(solve($move->perform($board),$marbles-1)){
+            say $move->to_string();
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+$board->[3][5] = 0;
+
+# 36 marbles
+solve($board,36);
+#my $moves = get_moves($board);
+#print_board($board);
+#print_moves($moves);
+#$board = $moves->[0]->perform($board);
+#print_board($board);
+#$moves = get_moves($board);
+
+#print_moves($moves);
+
 #print Dumper($board);
