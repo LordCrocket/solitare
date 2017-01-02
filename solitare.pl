@@ -6,6 +6,7 @@ use Data::Dumper;
 use v5.10;
 $| = 1;
 my $pad = 2;
+my $debug = 0;
 
 {
     package Move;
@@ -134,6 +135,23 @@ my $moves_sub = sub {
     }
 };
 
+my $orphans_sub = sub {
+    (my $board,my $row, my $col,my $found) = @_;
+    my $element = $board->[$row][$col];
+    if($element == 1){
+        if($board->[$row+1][$col] != 1 && $board->[$row+2][$col] != 1
+        && $board->[$row-1][$col] != 1 && $board->[$row-2][$col] != 1
+        && $board->[$row][$col+1] != 1 && $board->[$row][$col+2] != 1
+        && $board->[$row][$col-1] != 1 && $board->[$row][$col-2] != 1){
+            $$found = 1;
+        }
+    }
+
+    if($$found == 1){
+        #say "Unsolvable";
+    }
+};
+
 sub print_board{
     (my $board) = @_;
     traverse_board($board, $print_sub, sub {print "\n"});
@@ -144,6 +162,16 @@ sub get_moves {
     traverse_board($board, $moves_sub, sub {},$moves);
     return $moves;
 }
+
+sub unsolvable {
+    (my $board) = @_;
+    my $found = 0;
+    traverse_board($board, $orphans_sub, sub {},\$found);
+    if($found){
+        #print_board($board);
+    }
+    return $found;
+};
 sub  print_moves {
     (my $moves) = @_;
     foreach my $move (@{$moves}){
@@ -152,32 +180,36 @@ sub  print_moves {
 }
 
 sub solve {
-    my ($board,$marbles) = @_;
-    if($marbles == 1){
+    my ($board,$marbles,$target) = @_;
+    state $unsolv = 0;
+    state $out_of_moves = 0;
+
+    if($marbles == $target){
         print_board($board);
         return 1;
     }
+    if(unsolvable($board)){
+        $unsolv++;
+        return 0;         
+    }
+
     foreach my $move (@{get_moves($board)}){
-        if(solve($move->perform($board),$marbles-1)){
+        if(solve($move->perform($board),$marbles-1,$target)){
             say $move->to_string();
             return 1;
         }
+        elsif($debug) {
+            if($out_of_moves % 10000 == 0 || $unsolv % 10000 == 0){
+                say "OutOfMoves: $out_of_moves, unsolvable: $unsolv";
+            }
+        }
     }
-
+    $out_of_moves++;
     return 0;
 }
 
-$board->[3][5] = 0;
+$board->[2][5] = 0;
 
+$debug = 0;
 # 36 marbles
-solve($board,36);
-#my $moves = get_moves($board);
-#print_board($board);
-#print_moves($moves);
-#$board = $moves->[0]->perform($board);
-#print_board($board);
-#$moves = get_moves($board);
-
-#print_moves($moves);
-
-#print Dumper($board);
+solve($board,36,4);
