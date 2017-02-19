@@ -1,0 +1,5 @@
+Setup with local lib. 
+
+Needs make, gcc, cpanminus, local::lib
+
+( eval $(perl -Mlocal::lib=./perl5) ; cpanm Clone )
