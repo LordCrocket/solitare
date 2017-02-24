@@ -9,15 +9,13 @@ use local::lib "$FindBin::Bin/perl5";
 use lib "$FindBin::Bin/lib";
 
 use Data::Dumper;
-use Memoize;
-use DB_File;
 use Math::BigInt;
 use Getopt::Long;
 
 ## Custom ##
 use Move;
 use Board;
-
+use Solver qw(solve activate_memoize);
 
 $| = 1;
 my $debug = 0;
@@ -28,27 +26,12 @@ GetOptions ('v+' => \$debug,'m:s' => \$memoize,'n:i' => \$marbles );
 
 my $board = Board->create_board();
 
-my $moves_sub = sub {
-    (my $board,my $row, my $col,my $moves) = @_;
-    my $element = $board->[$row][$col];
-    if($element == 0){
-             
-            push @$moves, grep {$_} (Move->right($board,$row,$col),
-                                     Move->left($board,$row,$col),
-                                     Move->up($board,$row,$col),
-                                     Move->down($board,$row,$col));
-    }
-};
-
-my $to_string_sub =  sub  {
-    (my $board,my $row, my $col,my $string) = @_;
-    my $element = $board->[$row][$col];
-    
-    $$string .= $element > 0 ? $element : 0;
-};
 
 my $orphans_sub = sub {
     (my $board,my $row, my $col,my $unsolv) = @_;
+    if($$unsolv == 1){
+        return;
+    }
     my $element = $board->[$row][$col];
     if($element == 1){
         my $startRow = $row - 2;
@@ -75,32 +58,11 @@ my $orphans_sub = sub {
     }
 
 };
+my $orphans_strat = sub {
+    (my $board,my $unsolv) = @_;
+    $board->traverse($orphans_sub, sub {},$unsolv);
+};
 
-sub board_to_string {
-    (my $board) = @_;
-    my $string = "";
-    
-    $board->traverse($to_string_sub, sub {},\$string);
-    my $digit =  Math::BigInt->from_bin($string);
-    return sprintf("%X", $digit);
-
-}
-sub get_moves {
-    (my $board) = @_;
-    my $moves = [];
-    $board->traverse($moves_sub, sub {},$moves);
-    return $moves;
-}
-
-sub unsolvable {
-    (my $board) = @_;
-    my $unsolv = 0;
-    $board->traverse($orphans_sub, sub {},\$unsolv);
-    if($unsolv){
-        #print_board($board);
-    }
-    return $unsolv;
-}
 sub _center_mass {
     (my $board) = @_;
     my $mass = 0;
@@ -159,65 +121,8 @@ sub center_mass {
 
 
 
-sub  print_moves {
-    (my $moves) = @_;
-    foreach my $move (@{$moves}){
-        say $move->to_string();
-    }
-}
-
-sub solve {
-    my ($board,$marbles,$target) = @_;
-    state $tries = 0;
-    state $unsolv = 0;
-    #state $out_of_moves = 0;
-    $tries++;
-    if($debug && $tries % 10000 == 0) {
-        say "Tries: $tries"; 
-    }
-
-    if($marbles == $target){
-        $board->print();
-        return 1;
-    }
-
-    if($marbles == center_mass($board)){
-        $board->print();
-    }
-    #if(($marbles < 22 && (center_mass($board,$marbles+8) < ($marbles - sqrt($marbles) + 1)))){
-    #    $unsolv++;
-    #    if($debug && $unsolv % 10000 == 0) {
-    #        say "Not centered: $unsolv"; 
-    #    }
-    #    return 0;         
-    #}
-
-    foreach my $move (@{get_moves($board)}){
-        if(solve($move->perform($board),$marbles-1,$target)){
-            say $move->to_string();
-            return 1;
-        }
-        #if($debug) {
-        #    if(($out_of_moves != 0 && $out_of_moves % 10000 == 0) || ($unsolv != 0 && $unsolv % 10000 == 0)){
-        #        say "OutOfMoves: $out_of_moves, unsolvable: $unsolv";
-        #    }
-        #}
-    }
-    #$out_of_moves++;
-    return 0;
-}
-
-
 $board->[0][3] = 0;
-if(defined $memoize){
-	my $cache_type = 'MEMORY';
-	
-	if($memoize){
-		tie my %cache => 'DB_File', $memoize, O_RDWR|O_CREAT, 0666;
-		$cache_type = [HASH => \%cache];
-	}
-	say "Using memoize. [$memoize]" if $debug;
-	memoize('solve',NORMALIZER => 'board_to_string',SCALAR_CACHE => $cache_type);
-}
 # 36 marbles
-solve($board,36,$marbles);
+my $strategies = [$orphans_strat];
+my $solver = Solver->new({debug => $debug,memoize => $memoize});
+$solver->solve($board,36,$marbles,$strategies);
