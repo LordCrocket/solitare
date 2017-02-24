@@ -15,7 +15,8 @@ use Getopt::Long;
 ## Custom ##
 use Move;
 use Board;
-use Solver qw(solve activate_memoize);
+use Solver;
+use Strategy::Orphan qw (orphans_strat);
 
 $| = 1;
 my $debug = 0;
@@ -27,41 +28,6 @@ GetOptions ('v+' => \$debug,'m:s' => \$memoize,'n:i' => \$marbles );
 my $board = Board->create_board();
 
 
-my $orphans_sub = sub {
-    (my $board,my $row, my $col,my $unsolv) = @_;
-    if($$unsolv == 1){
-        return;
-    }
-    my $element = $board->[$row][$col];
-    if($element == 1){
-        my $startRow = $row - 2;
-        my $endRow = $startRow + 4;
-
-        my $startCol = $col - 2;
-        my $endCol = $startCol + 4;
-
-        $startRow = $startRow > 0 ? $startRow : 0;
-        $startCol = $startCol > 0 ? $startCol : 0;
-
-        $endRow = $endRow < 7 ? $endRow : 6;
-        $endCol = $endCol < 7 ? $endCol : 6;
-        for my $nRow ($startRow .. $endRow){
-            foreach my $nCol ($startCol .. $endCol){
-                next if($nRow == $row && $nCol == $col);
-                if($board->[$nRow][$nCol]>0){
-                    $$unsolv = 0;
-                    return;
-                }
-            }
-        }
-        $$unsolv = 1;
-    }
-
-};
-my $orphans_strat = sub {
-    (my $board,my $unsolv) = @_;
-    $board->traverse($orphans_sub, sub {},$unsolv);
-};
 
 sub _center_mass {
     (my $board) = @_;
@@ -123,6 +89,6 @@ sub center_mass {
 
 $board->[0][3] = 0;
 # 36 marbles
-my $strategies = [$orphans_strat];
+my $strategies = [\&orphans_strat];
 my $solver = Solver->new({debug => $debug,memoize => $memoize});
 $solver->solve($board,36,$marbles,$strategies);
