@@ -1,6 +1,7 @@
 package Board;
 use strict;
 use warnings;
+use v5.10;
 
 sub fill {
     my ($row,$slots) = @_;
@@ -50,7 +51,5 @@ sub print{
     (my $self) = @_;
     $self->traverse($print_sub, sub {print "\n"});
 }
-
-
 
 1;

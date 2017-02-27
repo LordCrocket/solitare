@@ -33,10 +33,10 @@ sub _solve {
     #if($marbles == center_mass($board)){
     #    $board->print();
     #}
-    if(_unsolvable($board,$strategies,$debug)){
+    if(_unsolvable($board,$marbles,$strategies,$debug)){
         $unsolv++;
         if($debug && $unsolv % 10000 == 0) {
-            say "Not centered: $unsolv";
+            say "Unsolvable: $unsolv";
         }
         return 0;
     }
@@ -76,10 +76,12 @@ sub _get_moves {
 
 
 sub _unsolvable {
-    (my $board,my $strategies,my $debug) = @_;
+    (my $board,my $marbles,my $strategies,my $debug) = @_;
     my $unsolv = 0;
     foreach my $strategy (@$strategies){
-        $strategy->($board,\$unsolv);
+        if($unsolv == 0){
+            $strategy->($board,$marbles,\$unsolv);
+        }
     }
     if($unsolv && $debug > 1){
         $board->print();

@@ -37,7 +37,7 @@ my $orphans_sub = sub {
 
 };
 sub orphans_strat {
-    (my $board,my $unsolv) = @_;
+    (my $board,my $marbles,my $unsolv) = @_;
     $board->traverse($orphans_sub, sub {},$unsolv);
 }
 
