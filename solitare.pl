@@ -28,8 +28,9 @@ GetOptions ('v+' => \$debug,'m:s' => \$memoize,'n:i' => \$marbles );
 
 my $board = Board->create_board();
 
-$board->[1][1] = 0;
+$board->[0][3] = 0;
 # 36 marbles
-my $strategies = [\&points_strat];
+my $strategies = [\&points_strat,\&orphans_strat];
+#my $strategies = [\&points_strat];
 my $solver = Solver->new({debug => $debug,memoize => $memoize});
 $solver->solve($board,36,$marbles,$strategies);

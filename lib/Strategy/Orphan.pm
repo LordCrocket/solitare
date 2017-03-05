@@ -38,6 +38,7 @@ my $orphans_sub = sub {
 };
 sub orphans_strat {
     (my $board,my $marbles,my $unsolv) = @_;
-    $board->traverse($orphans_sub, sub {},$unsolv);
+    if($marbles < 8){
+        $board->traverse($orphans_sub, sub {},$unsolv);
+    }
 }
-
