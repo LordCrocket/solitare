@@ -3,25 +3,30 @@ use strict;
 use warnings;
 use v5.10;
 
+my $quiet = 0;
+
 sub fill {
-    my ($row,$slots) = @_;
+    my ($row,$slots,$value) = @_;
+    $value //= 1;
     my $empty  = (7 - $slots)/2;
     for my $col (0 + $empty .. $empty + $slots - 1){
-        $row->[$col] = 1;
+        $row->[$col] = $value;
     }
 }
 
 sub create_board {
 	my $class = shift;
+    my $value = shift;
+    $value //= 1;
     my $board;
     push @$board, [(-1) x 7] for 1 .. 7;
-    fill($board->[0],3);
-    fill($board->[1],5);
-    fill($board->[2],7);
-    fill($board->[3],7);
-    fill($board->[4],7);
-    fill($board->[5],5);
-    fill($board->[6],3);
+    fill($board->[0],3,$value);
+    fill($board->[1],5,$value);
+    fill($board->[2],7,$value);
+    fill($board->[3],7,$value);
+    fill($board->[4],7,$value);
+    fill($board->[5],5,$value);
+    fill($board->[6],3,$value);
 	return bless $board, $class;
 }
 
@@ -49,7 +54,9 @@ my $print_sub = sub {
 
 sub print{
     (my $self) = @_;
-    $self->traverse($print_sub, sub {print "\n"});
+    if(!$quiet){
+        $self->traverse($print_sub, sub {print "\n"});
+    }
 }
 
 1;

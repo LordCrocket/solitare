@@ -6,6 +6,11 @@ use v5.10;
 use Memoize;
 use DB_File;
 
+use Math::BigInt;
+use Move;
+use Board;
+
+use Data::Dumper;
 
 sub new {
     my $class = shift;
@@ -16,37 +21,37 @@ sub new {
 } 
 
 sub _solve {
-    my ($board,$marbles,$target,$strategies,$debug) = @_;
+    my ($board,$marbles,$target,$strategies,$config) = @_;
     state $tries = 0;
     state $unsolv = 0;
     state $out_of_moves = 0;
     $tries++;
-    if($debug && $tries % 10000 == 0) {
+    if($config->{debug} && $tries % 10000 == 0) {
         say "Tries: $tries"; 
     }
 
     if($marbles == $target){
-        $board->print();
+        $board->print() unless $config->{quiet};
         return 1;
     }
 
     #if($marbles == center_mass($board)){
     #    $board->print();
     #}
-    if(_unsolvable($board,$marbles,$strategies,$debug)){
+    if(_unsolvable($board,$marbles,$strategies,$config)){
         $unsolv++;
-        if($debug && $unsolv % 10000 == 0) {
+        if($config->{debug} && $unsolv % 10000 == 0) {
             say "Unsolvable: $unsolv";
         }
         return 0;
     }
 
     foreach my $move (@{_get_moves($board)}){
-        if(_solve($move->perform($board),$marbles-1,$target,$strategies,$debug)){
-            say $move->to_string();
+        if(_solve($move->perform($board),$marbles-1,$target,$strategies,$config)){
+            say $move->to_string() unless $config->{quiet};
             return 1;
         }
-        if($debug) {
+        if($config->{debug}) {
             if(($out_of_moves != 0 && $out_of_moves % 10000 == 0) || ($unsolv != 0 && $unsolv % 10000 == 0)){
                 say "OutOfMoves: $out_of_moves, unsolvable: $unsolv";
             }
@@ -73,17 +78,15 @@ sub _get_moves {
     return $moves;
 }
 
-
-
 sub _unsolvable {
-    (my $board,my $marbles,my $strategies,my $debug) = @_;
+    (my $board,my $marbles,my $strategies,my $config) = @_;
     my $unsolv = 0;
     foreach my $strategy (@$strategies){
         if($unsolv == 0){
             $strategy->($board,$marbles,\$unsolv);
         }
     }
-    if($unsolv && $debug > 1){
+    if($unsolv && $config->{debug} > 1){
         $board->print();
     }
     return $unsolv;
@@ -105,6 +108,7 @@ sub board_to_string {
     return sprintf("%X", $digit);
 }
 
+
 sub activate_memoize {
     (my $memoize,my $debug) = @_;
     if(defined $memoize){
@@ -124,9 +128,20 @@ sub activate_memoize {
 #        say $move->to_string();
 #    }
 #}
+#
+my $number_of_marbles_sub = sub {
+    (my $board,my $row, my $col,my $count) = @_;
+    my $element = $board->[$row][$col];
+    $$count += $element if $element > 0;
+};
+
 
 sub solve {
-    my ($self,$board,$marbles,$target,$strategies) = @_;
-    return _solve($board,$marbles,$target,$strategies,$self->{debug});
+    my ($self,$board,$target,$strategies) = @_;
+    my $marbles = 0;
+    $board->traverse($number_of_marbles_sub, sub {},\$marbles);
+    my $config = { debug => $self->{debug},
+                   quiet  => $self->{quiet} };
+    return _solve($board,$marbles,$target,$strategies,$config);
 }
 1;
